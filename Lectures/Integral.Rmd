@@ -1,0 +1,176 @@
+---
+title: "Cálculo de Integrais"
+author: "João Baiochi"
+date: "October 12, 2015"
+output:
+  html_document:
+    highlight: tango
+    theme: flatly
+    toc: yes
+---
+
+```{r echo=FALSE}
+
+library(ggplot2)
+#library(cubature)
+library(knitr)
+
+```
+
+## Integral de 1 Dimensão  
+
+
+Função para calcular integral de 1 dimensão usando a [Soma de Riemann Média](https://pt.wikipedia.org/wiki/Soma_de_Riemann#Soma_M.C3.A9dia).
+
+Segundo a definição da Soma de Riemann: 
+$$ S = \sum_{i=0}^{n-1} f(t_i)(x_{i+1}-x_i)$$ 
+
+Podemos criar um algorítmo com  $f(t_i) =  média(h)$, sendo h = altura do retânculo, e sua base $(x_{i+1}-x_i)$:  
+$$ S = \sum_{i=1}^{n} [Média(h)]*[Base]$$  
+$$ S = \sum_{i=1}^{n} \frac{y_i+y_{i+1}}{2} (x_{i+1}-x_i)$$  
+
+```{r}
+integral1D <- function(x,y){
+  s = 0
+  n = length(x)
+  for (i in 1:(n-1)) {
+    #Riemann Sum(Mean)
+    s = s + ( (y[i+1] + y[i])/2 * (x[i+1]-x[i]) )
+  }
+  return(s)
+}
+```
+
+### Testando o algoritmo  
+
+Criamos um `data.frame` contendo os valores de **x** na primeira coluna e de **y** na segunda, usando a seguinte função $f(t) = e^{-\beta*t}$, com limite superior **a = 2** e inferior **b = 10**:  
+
+```{r}
+#create data.frame
+points <- cbind( seq(2,10,by=0.2), exp(-0.8*seq(2,10, by=0.2))) 
+kable(head(points))
+#points plot
+plot(points, pch=16, cex=0.5, col='forestgreen', xlab = 'x coordinates', ylab = 'y coordinates', xlim = c(0,11), axes=FALSE)
+axis(side = 1, at=seq(0,10, by=1))
+axis(side = 2, at=seq(0,0.2, by=0.05))
+abline(v = points[1,1], col='gray')
+lines(points, col='gray')
+#bar plot
+barplot(points[,2], col = 'deepskyblue3')
+```
+
+
+Agora podemos comparar a eficiência do alrogitmo criado com o disponível no R:  
+```{r results='hide'}
+# Built function
+integral1D(points[,1], points[,2])
+# R integrand function
+integrand <- function(x) {exp(-0.8*x)}
+integrate(integrand, lower=2, upper=10)
+```
+
+- Função criada `integral1D()`= `r integral1D(points[,1], points[,2])`  
+- Função do R `integrate()`= `r integrate(integrand, lower=2, upper=10)$value`  
+
+
+## Integral de 2 Dimensões  
+
+PRECISA ATUALIZAR
+```{r eval=FALSE}
+f <- function(x,y){return(x^2 + 2*y^2)}
+
+x <- seq(1,10, by=0.1)
+y <- seq(1,10, by=0.1)
+z <- outer(X=x, Y=y, FUN=f)
+
+persp(z)
+
+# Square mask
+create.mask <- function(x,y,a,b,c,d){
+  mask <- matrix(0,ncol=length(x), nrow=length(y))
+  mask[a:b,c:d] <- 1
+  return(mask)
+}
+mask <- create.mask(x,y, a=1, b=5, c=1, d=5)
+
+integral2D <- function(x,y,z, mask){
+  s = 0
+  n = length(x)
+  m = length(y)
+  #z <- z * mask
+  for (i in 1:(n-1)) {
+    for (j in 1:(m-1)) {
+      x1 = x[i+1] - x[i]
+      x2 = y[j+1] - y[j]
+      s = s + (x1 * x2 * z[i,j])
+    }
+  }
+  return(s)
+}
+integral2D(x,y,z,mask)
+
+
+# R function
+integrand <- function(x) {return(x[1]^2 + 2*x[2]^2)}
+adaptIntegrate(f=integrand, lowerLimit=c(1,1), upperLimit=c(10,10))
+```
+
+
+## Funções Gaussianas  
+
+PRECISA ATUALIZAR
+```{r eval=FALSE}
+# =================================================
+#          Gaussian Functions
+# =================================================
+
+# X ~ N(µ,Sigma)
+# µ: qualquer valor
+# Sigma: > 0
+gaussian <- function(x, mu, sigma){
+  output <- 1/sqrt(2*pi) * 1/sigma * exp(-1/2*(x-mu)^2/sigma^2)
+  return(output)
+}
+
+gaussian2d <- function(x, y, xmu, xsigma, ymu, ysigma){
+  output <- 1/2 * 1/xsigma * 1/ysigma * 
+    exp(-1/2*((x-xmu)^2/xsigma^2 + (y-ymu)^2/ysigma^2))
+  return(output)
+}
+
+gauss2d <- function(x, mu, sigma){
+  n <- length(x) #dimension
+  A <- t(x-mu) %*% solve(sigma) %*% (x-mu)
+  output <- 1/(2*pi)^(n/2) * sqrt(1/det(sigma)) * exp(-1/2 * A)
+  return(as.numeric(output))
+}
+
+m = matrix(c(20.5,-12.8), ncol=1, nrow=2) 
+S = matrix(c(5,0,0,8), ncol=2, nrow=2)
+ax = 20.5-4*5
+bx = 20.5+4*5
+ay = -12.8-4*8
+by = -12.8+4*8
+
+grid <- function(ax, bx, ay, by, m, S, points=100){ 
+  x <- seq(ax, bx, len=points)
+  y <- seq(ay, by, len=points)
+  z <- matrix(0,length(x), length(y))
+  
+  for (i in 1:length(x)) {
+    for (j in 1:length(y)) {
+      z[i,j] <- gauss2d( c(x[i], y[j]), m, S)
+    }
+  }
+  return(z)
+}
+
+Z <- grid(ax,bx,ay,by,m,S)
+image(Z)
+persp(Z)
+```
+
+
+
+
+

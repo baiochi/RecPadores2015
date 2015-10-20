@@ -1,0 +1,104 @@
+---
+title: "Principal Component Analysis"
+author: "João Baiochi"
+date: "October 12, 2015"
+output:
+  html_document:
+    highlight: tango
+    theme: flatly
+    toc: yes
+---
+
+```{r functions, echo=FALSE}
+generate.matrix <- function(n, dim=100, mu=3, sdv=2){
+  stopifnot(n > 1)
+  m = as.matrix(rnorm(dim, mu, sdv)) 
+  for(i in 1:(n-1))
+      m = cbind(m, rnorm(dim, sample(1:(mu+5), 1), sdv)) 
+  return(m)
+}
+# Given a M matrix, find its principal components
+# @param M            Numeric matrix
+# @param dimensions   Number of the dimension wanted to shrink (2 or 3)
+# @param makePlot     Logical value to visualize PCA plot.
+# @param ...          Aditional graphical parameters to plot()
+#
+# @return             A list containing original data, data after rotation, 
+#                      rotation matrix, max variances, standard deviations, 
+#                      eigeinvalues and eigeinvectors.
+# @examples
+#   p1 <- pca(generate.matrix(3), 2, col='forestgreen', pch=16)
+#   p2 <- pca(generate.matrix(3), 3, color='forestgreen', pch=16)
+pca <- function(M, dimensions = 2, makePlot=TRUE, ...){
+  if( !dimensions %in% c(2,3) )
+    stop('Dimensions must be 2 or 3.\n')
+  
+  #find covariance matrix
+  cov.matrix <- cov(M)
+  #find eigeinvalues from cov.matrix
+  eigen.values <- as.matrix((eigen(cov.matrix))$values)  
+  #find eigeinvectors from cov.matrix
+  eigen.vectors <- as.matrix((eigen(cov.matrix))$vectors)  
+  #rotation matrix
+  #R <- t(eigen.vectors)
+  R <- eigen.vectors
+  
+  #rotate all points
+  dat = M
+  for(i in 1:nrow(dat)){
+    dat[i,] = M[i,] %*% R
+  }  
+  
+  # % of the first/second/third PCA
+  var1 <- 100*eigen.values[1]/sum(eigen.values)
+  var2 <- 100*eigen.values[2]/sum(eigen.values)
+  var3 <- 100*eigen.values[3]/sum(eigen.values)
+  
+  if(makePlot){
+    if(dimensions==2){
+    #N-dimensional plot to 2D
+    plot(dat[,1],dat[,2], 
+        xlab = paste('PCA1', sprintf('(%0.1f%% variance)', var1)), 
+        ylab = paste('PCA2', sprintf('(%0.1f%% variance)', var2)), 
+        ...)
+    }
+    else{
+    #N-dimensional plot to 3D
+    scatterplot3d(dat[,1],dat[,2],dat[,3],
+                  xlab = paste('PCA1', sprintf('(%0.1f%% variance)', var1)), 
+                  ylab = paste('PCA2', sprintf('(%0.1f%% variance)', var2)),
+                  zlab = paste('PCA3', sprintf('(%0.1f%% variance)', var2)),
+                  ...)
+    }
+  }
+  r <- new('list')
+  r$points <- dat
+  r$matrix <- M
+  r$rotation <- R
+  r$var <- c(var1,var2,var3)
+  r$sdv <- apply(eigen.values, 1, sqrt)
+  r$eigenvalues <- eigen.values
+  r$eigenvectors <- eigen.vectors
+  
+  return(r)
+}
+
+```
+
+```{r teste}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
